@@ -88,7 +88,7 @@ class CrewPairingModel:
         for k in self.K:
             crew = self.crews.iloc[k]
             duty_cost_rate = crew['DutyCostPerHour']
-            pairing_cost_rate = crew['ParingCostPerHour']
+            pairing_cost_rate = crew['ParingCostPerHour']  # Note: Using 'ParingCostPerHour' to match CSV column name
             
             for p in self.P:
                 pairing = self.pairings[p]

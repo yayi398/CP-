@@ -81,8 +81,9 @@ class DataLoader:
         self.flights['ArrivalDate'] = self.flights['ArrivalDateTime'].dt.date
         
         # 解析机组配置需求 (C1F1 -> 1 Captain + 1 First Officer)
-        self.flights['CaptainRequired'] = self.flights['Comp'].str.extract(r'C(\d+)')[0].astype(int)
-        self.flights['FirstOfficerRequired'] = self.flights['Comp'].str.extract(r'F(\d+)')[0].astype(int)
+        # 使用 fillna(0) 处理无法匹配的情况
+        self.flights['CaptainRequired'] = self.flights['Comp'].str.extract(r'C(\d+)', expand=False).fillna(0).astype(int)
+        self.flights['FirstOfficerRequired'] = self.flights['Comp'].str.extract(r'F(\d+)', expand=False).fillna(0).astype(int)
         self.flights['TotalCrewRequired'] = (
             self.flights['CaptainRequired'] + self.flights['FirstOfficerRequired']
         )

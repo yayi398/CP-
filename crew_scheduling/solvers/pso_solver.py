@@ -162,6 +162,7 @@ class PSOSolver:
     def _evaluate_fitness(self, particle: np.ndarray) -> float:
         """
         评估粒子的适应度
+        包含工作负载平衡因子
         
         Args:
             particle: 粒子位置
@@ -194,8 +195,16 @@ class PSOSolver:
                 penalty += abs(assigned - required) * 10000
         
         # 惩罚项2: 机组时间冲突
+        # Note: O(n²) complexity for each crew. For large datasets, consider:
+        # 1. Pre-sorting flights by departure time
+        # 2. Using interval trees or sweep line algorithm for overlap detection
+        crew_hours = np.zeros(self.num_crews)
         for k in range(self.num_crews):
             assigned_flights = np.where(assignment[:, k] > 0.5)[0]
+            
+            # 计算工作时长（用于平衡）
+            for f in assigned_flights:
+                crew_hours[k] += self.flights.iloc[f]['FlightDuration'] / 60.0
             
             # 检查时间冲突
             for i in range(len(assigned_flights)):
@@ -210,6 +219,11 @@ class PSOSolver:
                     if not (flight1['ArrivalDateTime'] <= flight2['DepartureDateTime'] or
                            flight2['ArrivalDateTime'] <= flight1['DepartureDateTime']):
                         penalty += 5000
+        
+        # 惩罚项3: 工作负载不平衡（添加标准差惩罚）
+        if crew_hours.sum() > 0:
+            workload_std = np.std(crew_hours)
+            penalty += workload_std * 100  # 工作负载不平衡惩罚
         
         return total_cost + penalty
     

@@ -115,6 +115,7 @@ class GASolver:
     def _evaluate_fitness(self, individual: np.ndarray) -> float:
         """
         评估个体的适应度（成本越低越好）
+        包含工作负载平衡因子
         
         Args:
             individual: 个体（分配矩阵）
@@ -144,8 +145,14 @@ class GASolver:
                 penalty += abs(assigned - required) * 10000  # 大惩罚
         
         # 惩罚项2: 机组时间冲突
+        # Note: O(n²) complexity for each crew. For large datasets, consider optimizing with interval trees
+        crew_hours = np.zeros(self.num_crews)
         for k in range(self.num_crews):
             assigned_flights = np.where(individual[:, k] == 1)[0]
+            
+            # 计算工作时长（用于平衡）
+            for f in assigned_flights:
+                crew_hours[k] += self.flights.iloc[f]['FlightDuration'] / 60.0
             
             # 检查时间冲突
             for i in range(len(assigned_flights)):
@@ -160,6 +167,11 @@ class GASolver:
                     if not (flight1['ArrivalDateTime'] <= flight2['DepartureDateTime'] or
                            flight2['ArrivalDateTime'] <= flight1['DepartureDateTime']):
                         penalty += 5000  # 时间冲突惩罚
+        
+        # 惩罚项3: 工作负载不平衡（添加标准差惩罚）
+        if crew_hours.sum() > 0:
+            workload_std = np.std(crew_hours)
+            penalty += workload_std * 100  # 工作负载不平衡惩罚
         
         return total_cost + penalty
     
